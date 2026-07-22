@@ -161,6 +161,96 @@
   color: var(--muted);
 }
 
+:global(.score-entry-card .score-grid) {
+  gap: 16px;
+}
+
+:global(.score-entry-card .score-field) {
+  position: relative;
+  display: block;
+  min-height: 154px;
+  padding: 22px 24px 34px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fafdff;
+}
+
+:global(.score-entry-card .score-label) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "skill caption"
+    "skill value";
+  align-items: center;
+  column-gap: 18px;
+  row-gap: 5px;
+}
+
+:global(.score-entry-card .score-label b) {
+  grid-area: skill;
+  align-self: center;
+  font-size: 1.22rem;
+}
+
+:global(.score-entry-card .score-label::after) {
+  content: "PB Vision Score";
+  grid-area: caption;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+:global(.score-entry-card .score-label input[type="number"]) {
+  grid-area: value;
+  width: 88px;
+  height: 46px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 2px solid #b9ccdc;
+  border-radius: 10px;
+  background: white;
+  color: var(--navy);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  cursor: text;
+  appearance: textfield;
+}
+
+:global(.score-entry-card .score-label input[type="number"]:focus) {
+  border-color: var(--blue-dark);
+}
+
+:global(.score-entry-card .score-field > input[type="range"]) {
+  width: 100%;
+  margin: 25px 0 0;
+  accent-color: var(--blue-dark);
+  cursor: pointer;
+}
+
+:global(.score-entry-card .score-field::before),
+:global(.score-entry-card .score-field::after) {
+  position: absolute;
+  bottom: 14px;
+  color: #75839a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+:global(.score-entry-card .score-field::before) {
+  content: "2.0";
+  left: 24px;
+}
+
+:global(.score-entry-card .score-field::after) {
+  content: "5.5";
+  right: 24px;
+}
+
 @media (max-width: 760px) {
   .filterGrid {
     grid-template-columns: 1fr;
@@ -174,5 +264,22 @@
   .selectedHeader {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  :global(.score-entry-card .score-grid) {
+    grid-template-columns: 1fr;
+  }
+
+  :global(.score-entry-card .score-field) {
+    min-height: 148px;
+    padding-inline: 20px;
+  }
+
+  :global(.score-entry-card .score-field::before) {
+    left: 20px;
+  }
+
+  :global(.score-entry-card .score-field::after) {
+    right: 20px;
   }
 }
