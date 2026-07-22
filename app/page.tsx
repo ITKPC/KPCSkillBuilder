@@ -118,6 +118,11 @@ export default function Home() {
 
   const clearFilters = () => { setSkillFilter("all"); setLevelFilter("all"); setPracticeFilter("either"); setSearchText(""); };
   const removeCustomDrill = (id: string) => setCustomDrills((current) => current.filter((item) => item !== id));
+  const updateScore = (key: SkillKey, value: number) => {
+    const rounded = Math.round(value * 10) / 10;
+    const validValue = Math.min(5.5, Math.max(2, rounded));
+    setScores((current) => ({ ...current, [key]: validValue }));
+  };
   const startOver = () => {
     setScreen("home"); setScores(initialScores); setAssessment({}); setAssessmentIndex(0); setStyle("social");
     setChosenFocus([]); setDrillCount(4); setCustomDrills([]); clearFilters();
@@ -145,7 +150,7 @@ export default function Home() {
         <button className="start-card start-card-quaternary" onClick={() => { setSource("custom plan"); setCustomDrills([]); clearFilters(); setScreen("customstyle"); }}><span className="start-number">04</span><span className="start-title">Build my own plan</span><span className="start-description">Choose from all available drills</span></button>
       </div></div></section>}
 
-      {screen === "pbvision" && <section className="flow-screen"><div className="flow-card score-entry-card"><button className="back-button" onClick={() => setScreen("home")}>← Back</button><h1>Enter your PB Vision scores</h1><div className="score-grid">{skills.map((skill) => <label className="score-field" key={skill.key}><span className="score-label"><b>{skill.label}</b><span>{scores[skill.key].toFixed(1)}</span></span><input type="range" min="2" max="5.5" step="0.1" value={scores[skill.key]} onChange={(event) => setScores({ ...scores, [skill.key]: Number(event.target.value) })} /></label>)}</div><button className="primary-button" onClick={() => { setSource("PB Vision"); setScreen("style"); }}>Continue</button></div></section>}
+      {screen === "pbvision" && <section className="flow-screen"><div className="flow-card score-entry-card"><button className="back-button" onClick={() => setScreen("home")}>← Back</button><h1>Enter your PB Vision scores</h1><p className="flow-intro">Drag each slider or type the exact score. Scores must be between 2.0 and 5.5.</p><div className="score-grid">{skills.map((skill) => <label className="score-field" key={skill.key}><span className="score-label"><b>{skill.label}</b><input type="number" min="2" max="5.5" step="0.1" inputMode="decimal" aria-label={`${skill.label} PB Vision score`} value={scores[skill.key].toFixed(1)} onChange={(event) => { const value = Number(event.target.value); if (Number.isFinite(value)) updateScore(skill.key, value); }} /></span><input type="range" min="2" max="5.5" step="0.1" value={scores[skill.key]} onChange={(event) => updateScore(skill.key, Number(event.target.value))} /></label>)}</div><button className="primary-button" onClick={() => { setSource("PB Vision"); setScreen("style"); }}>Continue</button></div></section>}
 
       {screen === "assessment" && <section className="flow-screen"><div className="flow-card assessment-card"><button className="back-button" onClick={() => assessmentIndex === 0 ? setScreen("home") : setAssessmentIndex(assessmentIndex - 1)}>← Back</button><p className="eyebrow">Question {assessmentIndex + 1} of 6</p><h1>{assessmentStatements[skills[assessmentIndex].key]}</h1><div className="answer-grid">{answerChoices.map((answer) => <button key={answer.label} className="answer-button" onClick={() => chooseAssessmentAnswer(answer.value)}>{answer.label}</button>)}</div></div></section>}
 
