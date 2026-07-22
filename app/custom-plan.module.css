@@ -162,16 +162,16 @@
 }
 
 :global(.score-entry-card .score-grid) {
-  gap: 16px;
+  gap: 14px;
 }
 
 :global(.score-entry-card .score-field) {
   position: relative;
   display: block;
-  min-height: 154px;
-  padding: 22px 24px 34px;
+  min-height: 128px;
+  padding: 16px 22px 29px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   background: #fafdff;
 }
 
@@ -183,20 +183,20 @@
     "skill value";
   align-items: center;
   column-gap: 18px;
-  row-gap: 5px;
+  row-gap: 3px;
 }
 
 :global(.score-entry-card .score-label b) {
   grid-area: skill;
   align-self: center;
-  font-size: 1.22rem;
+  font-size: 1.16rem;
 }
 
 :global(.score-entry-card .score-label::after) {
   content: "PB Vision Score";
   grid-area: caption;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-align: center;
@@ -205,20 +205,27 @@
 
 :global(.score-entry-card .score-label input[type="number"]) {
   grid-area: value;
-  width: 88px;
-  height: 46px;
+  width: 84px;
+  height: 42px;
   margin: 0;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border: 2px solid #b9ccdc;
-  border-radius: 10px;
+  border-radius: 9px;
   background: white;
   color: var(--navy);
-  font-size: 1.25rem;
+  font-size: 1.18rem;
   font-weight: 800;
   line-height: 1;
   text-align: center;
   cursor: text;
   appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+:global(.score-entry-card .score-label input[type="number"]::-webkit-inner-spin-button),
+:global(.score-entry-card .score-label input[type="number"]::-webkit-outer-spin-button) {
+  margin: 0;
+  -webkit-appearance: none;
 }
 
 :global(.score-entry-card .score-label input[type="number"]:focus) {
@@ -227,7 +234,7 @@
 
 :global(.score-entry-card .score-field > input[type="range"]) {
   width: 100%;
-  margin: 25px 0 0;
+  margin: 17px 0 0;
   accent-color: var(--blue-dark);
   cursor: pointer;
 }
@@ -235,20 +242,20 @@
 :global(.score-entry-card .score-field::before),
 :global(.score-entry-card .score-field::after) {
   position: absolute;
-  bottom: 14px;
+  bottom: 10px;
   color: #75839a;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
 :global(.score-entry-card .score-field::before) {
   content: "2.0";
-  left: 24px;
+  left: 22px;
 }
 
 :global(.score-entry-card .score-field::after) {
   content: "5.5";
-  right: 24px;
+  right: 22px;
 }
 
 @media (max-width: 760px) {
@@ -271,15 +278,15 @@
   }
 
   :global(.score-entry-card .score-field) {
-    min-height: 148px;
-    padding-inline: 20px;
+    min-height: 124px;
+    padding-inline: 18px;
   }
 
   :global(.score-entry-card .score-field::before) {
-    left: 20px;
+    left: 18px;
   }
 
   :global(.score-entry-card .score-field::after) {
-    right: 20px;
+    right: 18px;
   }
 }
