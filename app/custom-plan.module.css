@@ -161,6 +161,16 @@
   color: var(--muted);
 }
 
+:global(.score-entry-card .flow-intro) {
+  font-size: 0;
+}
+
+:global(.score-entry-card .flow-intro::after) {
+  content: "Select or adjust each PB Vision score. Scores must be between 2.0 and 5.5.";
+  font-size: 1.1rem;
+  line-height: 1.55;
+}
+
 :global(.score-entry-card .score-grid) {
   gap: 14px;
 }
@@ -168,8 +178,8 @@
 :global(.score-entry-card .score-field) {
   position: relative;
   display: block;
-  min-height: 128px;
-  padding: 16px 22px 29px;
+  min-height: 132px;
+  padding: 16px 22px 32px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: #fafdff;
@@ -177,12 +187,12 @@
 
 :global(.score-entry-card .score-label) {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 118px 28px;
   grid-template-areas:
-    "skill caption"
-    "skill value";
+    "skill caption spacer"
+    "skill value spacer";
   align-items: center;
-  column-gap: 18px;
+  column-gap: 14px;
   row-gap: 3px;
 }
 
@@ -205,8 +215,9 @@
 
 :global(.score-entry-card .score-label input[type="number"]) {
   grid-area: value;
-  width: 84px;
-  height: 42px;
+  width: 94px;
+  height: 44px;
+  justify-self: center;
   margin: 0;
   padding: 5px 9px;
   border: 2px solid #b9ccdc;
@@ -217,7 +228,7 @@
   font-weight: 800;
   line-height: 1;
   text-align: center;
-  cursor: text;
+  cursor: pointer;
   appearance: textfield;
   -moz-appearance: textfield;
 }
@@ -233,6 +244,7 @@
 }
 
 :global(.score-entry-card .score-field > input[type="range"]) {
+  display: block;
   width: 100%;
   margin: 17px 0 0;
   accent-color: var(--blue-dark);
@@ -242,10 +254,12 @@
 :global(.score-entry-card .score-field::before),
 :global(.score-entry-card .score-field::after) {
   position: absolute;
-  bottom: 10px;
+  bottom: 9px;
+  z-index: 2;
   color: #75839a;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 :global(.score-entry-card .score-field::before) {
@@ -278,8 +292,12 @@
   }
 
   :global(.score-entry-card .score-field) {
-    min-height: 124px;
+    min-height: 128px;
     padding-inline: 18px;
+  }
+
+  :global(.score-entry-card .score-label) {
+    grid-template-columns: minmax(0, 1fr) 112px 10px;
   }
 
   :global(.score-entry-card .score-field::before) {
