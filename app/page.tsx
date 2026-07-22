@@ -14,8 +14,15 @@ const skills = [
 type SkillKey = (typeof skills)[number]["key"];
 type Scores = Record<SkillKey, number>;
 type PlayStyle = "social" | "competitive";
-type Screen = "home" | "pbvision" | "assessment" | "choose" | "style" | "results";
+type Screen = "home" | "pbvision" | "assessment" | "choose" | "style" | "session" | "results";
 type Source = "PB Vision" | "self-assessment" | "chosen focus";
+type DrillCount = 2 | 4 | 6;
+
+const sessionOptions: { name: string; drillCount: DrillCount; minutes: number }[] = [
+  { name: "Quick Rally", drillCount: 2, minutes: 20 },
+  { name: "Game On", drillCount: 4, minutes: 40 },
+  { name: "All In", drillCount: 6, minutes: 60 },
+];
 
 const initialScores: Scores = {
   serve: 3,
@@ -248,6 +255,7 @@ export default function Home() {
   const [assessmentIndex, setAssessmentIndex] = useState(0);
   const [source, setSource] = useState<Source>("self-assessment");
   const [chosenFocus, setChosenFocus] = useState<SkillKey[]>([]);
+  const [drillCount, setDrillCount] = useState<DrillCount>(4);
 
   const rankedSkills = useMemo(
     () => [...skills].sort((a, b) => scores[a.key] - scores[b.key]),
@@ -255,8 +263,20 @@ export default function Home() {
   );
 
   const priorities = source === "chosen focus"
-    ? chosenFocus.map((key) => skills.find((skill) => skill.key === key)!).filter(Boolean)
-    : rankedSkills.slice(0, 2);
+    ? chosenFocus.slice(0, drillCount / 2).map((key) => skills.find((skill) => skill.key === key)!).filter(Boolean)
+    : rankedSkills.slice(0, drillCount / 2);
+
+  const session = sessionOptions.find((option) => option.drillCount === drillCount)!;
+  const focusLabels = priorities.map((priority) => priority.label);
+  const focusTitle = focusLabels.length === 1
+    ? `Focus on ${focusLabels[0]}`
+    : `Focus on ${focusLabels.slice(0, -1).join(", ")}, then ${focusLabels.at(-1)}`;
+  const weeklyRhythm = [
+    "Learn the Priority 1 drills.",
+    priorities.length > 1 ? "Add the Priority 2 drills." : "Repeat Priority 1 and meet the targets.",
+    priorities.length > 2 ? "Add the Priority 3 drills." : "Increase the challenge gradually.",
+    `Mix all ${drillCount} drills, then reassess.`,
+  ];
 
   const startOver = () => {
     setScreen("home");
@@ -265,12 +285,13 @@ export default function Home() {
     setAssessmentIndex(0);
     setStyle("social");
     setChosenFocus([]);
+    setDrillCount(4);
   };
 
   const toggleFocus = (key: SkillKey) => {
     setChosenFocus((current) => {
       if (current.includes(key)) return current.filter((item) => item !== key);
-      if (current.length >= 2) return current;
+      if (current.length >= 3) return current;
       return [...current, key];
     });
   };
@@ -299,11 +320,13 @@ export default function Home() {
     setScreen("style");
   };
 
-  const showPlan = () => setScreen("results");
+  const chooseSession = (count: DrillCount) => {
+    setDrillCount(count);
+    setScreen("results");
+  };
 
   const savePlanImage = async () => {
     const width = 1200;
-    const drillCount = priorities.length * 2;
     const height = 690 + drillCount * 245;
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -355,9 +378,6 @@ export default function Home() {
     context.fillText("KPC SKILL BUILDER", 205, 72);
     context.fillStyle = "#ffffff";
     context.font = "800 48px Arial";
-    const focusTitle = priorities.length === 1
-      ? `Focus on ${priorities[0].label}`
-      : `Focus on ${priorities[0].label}, then ${priorities[1].label}`;
     wrapText(focusTitle, 205, 130, 900, 58);
     context.fillStyle = "#dceefe";
     context.font = "400 23px Arial";
@@ -401,12 +421,7 @@ export default function Home() {
     context.fillText("Four-week rhythm", 58, y + 10);
     context.fillStyle = "#52617b";
     context.font = "400 21px Arial";
-    const weeks = [
-      "Week 1: Learn the Priority 1 drills.",
-      "Week 2: Repeat Priority 1 and meet the targets.",
-      priorities.length > 1 ? "Week 3: Add the Priority 2 drills." : "Week 3: Increase the challenge gradually.",
-      "Week 4: Mix the drills, then reassess.",
-    ];
+    const weeks = weeklyRhythm.map((week, index) => `Week ${index + 1}: ${week}`);
     weeks.forEach((week, index) => context.fillText(week, 58, y + 52 + index * 34));
 
     const link = document.createElement("a");
@@ -538,7 +553,7 @@ export default function Home() {
             <button className="back-button" onClick={() => setScreen("home")}>← Back</button>
             <p className="eyebrow">Choose your focus</p>
             <h1>What would you like to improve?</h1>
-            <p className="flow-intro">Choose one or two areas. No scores or assessment needed.</p>
+            <p className="flow-intro">Choose up to three areas. Your session length will determine how many are included today.</p>
             <div className="focus-choice-grid">
               {skills.map((skill) => {
                 const selected = chosenFocus.includes(skill.key);
@@ -557,7 +572,7 @@ export default function Home() {
               })}
             </div>
             <div className="focus-footer">
-              <p>{chosenFocus.length === 0 ? "Choose at least one area." : `${chosenFocus.length} of 2 selected`}</p>
+              <p>{chosenFocus.length === 0 ? "Choose at least one area." : `${chosenFocus.length} of 3 selected`}</p>
               <button className="primary-button" disabled={!chosenFocus.length} onClick={continueWithChosenFocus}>Continue</button>
             </div>
           </div>
@@ -568,7 +583,7 @@ export default function Home() {
         <section className="flow-screen">
           <div className="flow-card style-card">
             <button className="back-button" onClick={() => setScreen(source === "PB Vision" ? "pbvision" : source === "chosen focus" ? "choose" : "assessment")}>← Back</button>
-            <p className="eyebrow">Step 2 of 2</p>
+            <p className="eyebrow">Step 2 of 3</p>
             <h1>What kind of practice plan do you want today?</h1>
             <p className="flow-intro">This changes the feel of your drills—not your assessment.</p>
             <div className="style-choice-grid">
@@ -583,7 +598,36 @@ export default function Home() {
                 <span>Pressure, tactical choices, attacking opportunities and match preparation.</span>
               </button>
             </div>
-            <button className="primary-button" onClick={showPlan}>Build my plan</button>
+            <button className="primary-button" onClick={() => setScreen("session")}>Choose my session length</button>
+          </div>
+        </section>
+      )}
+
+      {screen === "session" && (
+        <section className="flow-screen">
+          <div className="flow-card session-card">
+            <button className="back-button" onClick={() => setScreen("style")}>← Back</button>
+            <p className="eyebrow">Step 3 of 3</p>
+            <h1>How much time do you have today?</h1>
+            <p className="flow-intro">Choose a session that fits your day. Each drill takes about 10 minutes.</p>
+            <div className="session-choice-grid">
+              {sessionOptions.map((option) => {
+                const disabled = source === "chosen focus" && chosenFocus.length < option.drillCount / 2;
+                return (
+                  <button
+                    key={option.name}
+                    className="session-choice"
+                    disabled={disabled}
+                    onClick={() => chooseSession(option.drillCount)}
+                  >
+                    <span>{option.minutes} min</span>
+                    <b>{option.name}</b>
+                    <em>{option.drillCount} drills</em>
+                    {disabled && <small>Select {option.drillCount / 2} focus areas to use this session.</small>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}
@@ -593,10 +637,10 @@ export default function Home() {
           <div className="results-hero court-bg">
             <div>
               <p className="eyebrow">Your KPC development profile</p>
-              <h1>{priorities.length === 1 ? `Focus on ${priorities[0].label}` : `Focus first on ${priorities[0].label}, then ${priorities[1].label}`}</h1>
+              <h1>{focusTitle}</h1>
               <p>
                 Based on your {source === "PB Vision" ? "entered PB Vision scores" : source === "chosen focus" ? "chosen focus" : "six-question self-assessment"} and a {style} practice style.
-                This is a development guide—not an official club rating.
+                Your {session.name} session includes {drillCount} drills and takes about {session.minutes} minutes. This is a development guide—not an official club rating.
               </p>
             </div>
             <div className="results-actions no-print">
@@ -627,7 +671,7 @@ export default function Home() {
 
             <section className="plan-section" aria-labelledby="plan-heading">
               <div className="section-heading">
-                <div><p className="eyebrow">Your practice plan</p><h2 id="plan-heading">{priorities.length * 2} drills for your {priorities.length === 1 ? "focus area" : "two priorities"}</h2></div>
+                <div><p className="eyebrow">{session.name} · about {session.minutes} minutes</p><h2 id="plan-heading">{drillCount} drills across {priorities.length} focus {priorities.length === 1 ? "area" : "areas"}</h2></div>
                 <span className="style-badge">{style === "social" ? "Social plan" : "Competitive plan"}</span>
               </div>
               <div className="priority-blocks">
@@ -663,10 +707,7 @@ export default function Home() {
                 <h2>Your four-week rhythm</h2>
               </div>
               <ol>
-                <li><b>Week 1</b><span>Learn the two Priority 1 drills.</span></li>
-                <li><b>Week 2</b><span>Repeat Priority 1 and meet the targets.</span></li>
-                <li><b>Week 3</b><span>{priorities.length > 1 ? "Add the two Priority 2 drills." : "Increase the challenge gradually."}</span></li>
-                <li><b>Week 4</b><span>{priorities.length === 1 ? "Mix both drills, then reassess." : "Mix all four drills, then reassess."}</span></li>
+                {weeklyRhythm.map((week, index) => <li key={week}><b>Week {index + 1}</b><span>{week}</span></li>)}
               </ol>
             </section>
 
