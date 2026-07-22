@@ -424,12 +424,31 @@ export default function Home() {
     const weeks = weeklyRhythm.map((week, index) => `Week ${index + 1}: ${week}`);
     weeks.forEach((week, index) => context.fillText(week, 58, y + 52 + index * 34));
 
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+
+    const file = new File([blob], "KPC-practice-plan.png", { type: "image/png" });
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "My KPC practice plan",
+          text: "My Kamloops Pickleball Club practice plan",
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+
     const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = "KPC-practice-plan.png";
+    const imageUrl = URL.createObjectURL(blob);
+    link.href = imageUrl;
+    link.download = file.name;
     document.body.appendChild(link);
     link.click();
     link.remove();
+    URL.revokeObjectURL(imageUrl);
   };
 
   return (
@@ -645,7 +664,7 @@ export default function Home() {
             </div>
             <div className="results-actions no-print">
               <button className="secondary-button" onClick={startOver}>Start again</button>
-              <button className="primary-button" onClick={savePlanImage}>Save plan image</button>
+              <button className="primary-button" onClick={savePlanImage}>Save or share plan</button>
             </div>
           </div>
 
