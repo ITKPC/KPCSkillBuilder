@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { agilityDrills } from "./agility-drills";
+import { consistencyDrills } from "./consistency-drills";
+import { defenseDrills } from "./defense-drills";
 import { offenseDrills } from "./offense-drills";
 import { returnDrills, serveDrills, type Drill } from "./drill-library";
 
@@ -44,28 +47,13 @@ const answerChoices = [
   { label: "Consistently", value: 4.25 },
 ];
 
-const legacyDrills: Record<"defense" | "agility" | "consistency", Drill[]> = {
-  defense: [
-    { name: "Reset and Breathe", level: "foundation", purpose: "Soften a hard ball into the kitchen and regain control.", setup: "Begin in the transition zone while a partner feeds from the kitchen.", steps: ["Use a compact block with a relaxed grip.", "Aim for the middle of the kitchen.", "Hold balance before moving forward."], socialTarget: "Land 6 of 10 resets in the kitchen.", competitiveTarget: "Land 7 of 10 resets from randomized feeds.", solo: "Absorb firm wall rebounds so the next bounce lands close to you.", partner: "Increase pace only after three successful resets." },
-    { name: "Two-Step Recovery", level: "developing", purpose: "Defend, regain balance and move forward only when the ball permits.", setup: "Begin one step behind the kitchen while a partner applies controlled pressure.", steps: ["Block the first ball softly.", "Recover before taking a small step forward.", "Repeat until you reach the kitchen line."], socialTarget: "Reach the kitchen under control in 5 of 8 sequences.", competitiveTarget: "Reach the kitchen and neutralize 6 of 8 sequences.", solo: "Shadow block, recover and step movements.", partner: "Vary forehand and backhand pressure safely.", advancedVariation: "Randomize pace and direction while preserving a soft reset target." },
-  ],
-  agility: [
-    { name: "Split-Step Path", level: "foundation", purpose: "Move early and arrive balanced instead of hitting while running.", setup: "Place markers at the baseline, transition zone and kitchen line.", steps: ["Move with short, controlled steps.", "Split-step at every marker.", "Keep your chest forward and avoid crossing your feet."], socialTarget: "Complete six smooth paths with balance.", competitiveTarget: "Complete eight paths while reacting to random direction calls.", solo: "Change direction after every split-step.", partner: "A partner points left or right at each marker." },
-    { name: "Hit, Recover, Ready", level: "developing", purpose: "Return to a useful court position after every shot.", setup: "Place a home-base marker near the middle of your playing area.", steps: ["Move from home base to play the ball.", "Recover with small steps.", "Pause in ready position before the next feed."], socialTarget: "Complete 10 balanced repetitions.", competitiveTarget: "Complete 12 randomized repetitions without being late.", solo: "Use shadow swings at two side markers.", partner: "Feed alternating forehand, backhand and middle balls.", advancedVariation: "Add random short and deep feeds while preserving balance." },
-  ],
-  consistency: [
-    { name: "Ten-Ball Rally", level: "foundation", purpose: "Build repeatable control before increasing difficulty.", setup: "Choose one shot and agree on a comfortable pace.", steps: ["Count every successful contact.", "Restart after an error.", "Add placement only after reaching ten."], socialTarget: "Complete three rallies of 10 controlled shots.", competitiveTarget: "Complete three rallies of 15, then finish to a target.", solo: "Use a wall and mark a safe rebound zone.", partner: "Cooperate until the target is reached." },
-    { name: "High-Percentage Choice", level: "developing", purpose: "Choose the safer ball when under pressure.", setup: "Play half-court points and call safe or attack before contact.", steps: ["Choose safe below net height or when off balance.", "Attack only when balanced above net height.", "Review the choice rather than only the result."], socialTarget: "Make an appropriate choice on 8 of 10 balls.", competitiveTarget: "Make an appropriate choice on 9 of 10 balls.", solo: "Alternate low and high self-feeds.", partner: "Vary feed height and give immediate feedback.", advancedVariation: "Play scored half-court points with a bonus for correct decisions." },
-  ],
-};
-
 const drillLibrary: Record<SkillKey, Drill[]> = {
   serve: serveDrills,
   return: returnDrills,
   offense: offenseDrills,
-  defense: legacyDrills.defense,
-  agility: legacyDrills.agility,
-  consistency: legacyDrills.consistency,
+  defense: defenseDrills,
+  agility: agilityDrills,
+  consistency: consistencyDrills,
 };
 
 const allDrillChoices = skills.flatMap((skill) =>
