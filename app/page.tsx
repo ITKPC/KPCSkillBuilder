@@ -6,6 +6,7 @@ import { consistencyDrills } from "./consistency-drills";
 import { defenseDrills } from "./defense-drills";
 import { offenseDrills } from "./offense-drills";
 import { returnDrills, serveDrills, type Drill } from "./drill-library";
+import { explainRecommendation, recommendDrills } from "./recommendation-engine";
 import styles from "./custom-plan.module.css";
 
 const skills = [
@@ -102,12 +103,16 @@ export default function Home() {
   const planDrillCount = source === "custom plan" ? customPlanDrills.length : drillCount;
   const planMinutes = source === "custom plan" ? selectedMinutes : session.minutes;
   const sessionName = source === "custom plan" ? "Build Your Own" : session.name;
-  const planGroups = priorities.map((priority) => ({
-    priority,
-    drills: source === "custom plan"
-      ? customPlanDrills.filter((choice) => choice.skill.key === priority.key).map((choice) => choice.drill)
-      : drillLibrary[priority.key].slice(0, 2),
-  }));
+  const planGroups = priorities.map((priority) => {
+    const score = scores[priority.key];
+    return {
+      priority,
+      explanation: source === "custom plan" ? null : explainRecommendation(priority.label, score, source, style),
+      drills: source === "custom plan"
+        ? customPlanDrills.filter((choice) => choice.skill.key === priority.key).map((choice) => choice.drill)
+        : recommendDrills(drillLibrary[priority.key], score, 2, style),
+    };
+  });
   const focusLabels = priorities.map((priority) => priority.label);
   const focusTitle = focusLabels.length <= 1 ? `Focus on ${focusLabels[0] ?? "your selected skills"}` : `Focus on ${focusLabels.slice(0, -1).join(", ")}, then ${focusLabels.at(-1)}`;
 
@@ -168,7 +173,7 @@ export default function Home() {
         <div className="custom-plan-footer"><div><b>{customDrills.length} {customDrills.length === 1 ? "drill" : "drills"} selected</b><span>{customDrills.length ? `About ${selectedMinutes} minutes` : "Choose at least one drill"}</span></div><button className="primary-button" disabled={!customDrills.length} onClick={() => setScreen("results")}>{customDrills.length ? `Build ${selectedMinutes}-Minute Practice` : "Build my practice"}</button></div>
       </div></section>}
 
-      {screen === "results" && <section className="results-screen"><div className="results-hero court-bg"><div><p className="eyebrow">Your KPC development profile</p><h1>{focusTitle}</h1><p>Your {sessionName} session includes {planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} and takes about {planMinutes} minutes.</p></div><div className="results-actions"><button className="secondary-button" onClick={startOver}>Start again</button></div></div><div className="results-content"><section className="plan-section"><div className="priority-blocks">{planGroups.map(({ priority, drills }, priorityIndex) => <div className="priority-block" key={priority.key}><div className="priority-header"><span>Priority {priorityIndex + 1}</span><h3>{priority.label}</h3></div><div className="drill-grid">{drills.map((drill, drillIndex) => <article className="drill-card" key={`${priority.key}-${drill.name}`}><div className="drill-number">{priorityIndex + 1}.{drillIndex + 1}</div><p className="eyebrow">{levelLabel[drill.level]}</p><h4>{drill.name}</h4><p className="drill-purpose">{drill.purpose}</p><dl><div><dt>Set up</dt><dd>{drill.setup}</dd></div><div><dt>How to do it</dt><dd><ol>{drill.steps.map((step) => <li key={step}>{step}</li>)}</ol></dd></div><div className="target-box"><dt>Your target</dt><dd>{style === "social" ? drill.socialTarget : drill.competitiveTarget}</dd></div>{style === "competitive" && drill.advancedVariation && <div className="advanced-box"><dt>Advanced variation</dt><dd>{drill.advancedVariation}</dd></div>}<div className="two-way"><span><dt>Solo</dt><dd>{drill.solo}</dd></span><span><dt>With a partner</dt><dd>{drill.partner}</dd></span></div></dl></article>)}</div></div>)}</div></section></div></section>}
+      {screen === "results" && <section className="results-screen"><div className="results-hero court-bg"><div><p className="eyebrow">Your KPC development profile</p><h1>{focusTitle}</h1><p>Your {sessionName} session includes {planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} and takes about {planMinutes} minutes.</p></div><div className="results-actions"><button className="secondary-button" onClick={startOver}>Start again</button></div></div><div className="results-content"><section className="plan-section"><div className="priority-blocks">{planGroups.map(({ priority, explanation, drills }, priorityIndex) => <div className="priority-block" key={priority.key}><div className="priority-header"><span>Priority {priorityIndex + 1}</span><h3>{priority.label}</h3></div>{explanation && <div className="target-box"><dt>Why these drills?</dt><dd>{explanation}</dd></div>}<div className="drill-grid">{drills.map((drill, drillIndex) => <article className="drill-card" key={`${priority.key}-${drill.name}`}><div className="drill-number">{priorityIndex + 1}.{drillIndex + 1}</div><p className="eyebrow">{levelLabel[drill.level]}</p><h4>{drill.name}</h4><p className="drill-purpose">{drill.purpose}</p><dl><div><dt>Set up</dt><dd>{drill.setup}</dd></div><div><dt>How to do it</dt><dd><ol>{drill.steps.map((step) => <li key={step}>{step}</li>)}</ol></dd></div><div className="target-box"><dt>Your target</dt><dd>{style === "social" ? drill.socialTarget : drill.competitiveTarget}</dd></div>{style === "competitive" && drill.advancedVariation && <div className="advanced-box"><dt>Advanced variation</dt><dd>{drill.advancedVariation}</dd></div>}<div className="two-way"><span><dt>Solo</dt><dd>{drill.solo}</dd></span><span><dt>With a partner</dt><dd>{drill.partner}</dd></span></div></dl></article>)}</div></div>)}</div></section></div></section>}
     </main>
   );
 }
