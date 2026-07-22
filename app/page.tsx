@@ -444,8 +444,8 @@ export default function Home() {
             <p className="eyebrow">Your game. Your next step.</p>
             <h1>Build the part of your game that matters most</h1>
             <p className="hero-copy">
-              A private tool that creates a personal practice plan—without names,
-              accounts or saved results.
+              A Player Development tool created by the Kamloops Pickleball Club
+              to help players build a practice plan that is focused, achievable and fun.
             </p>
 
             <div className="start-grid" aria-label="Choose how to begin">
@@ -470,20 +470,6 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="home-rail">
-            <div className="style-preview" aria-label="Plans for social and competitive players">
-              <span className="style-chip active">Social</span>
-              <span className="style-chip">Competitive</span>
-            </div>
-            <div className="skill-preview">
-              {skills.map((skill) => (
-                <div className="skill-mini" key={skill.key}>
-                  <span>{skill.symbol}</span>
-                  {skill.label}
-                </div>
-              ))}
-            </div>
-          </div>
         </section>
       )}
 
