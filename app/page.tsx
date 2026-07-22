@@ -58,6 +58,7 @@ type Drill = {
   competitiveTarget: string;
   solo: string;
   partner: string;
+  advancedVariation?: string;
 };
 
 const drillLibrary: Record<SkillKey, Drill[]> = {
@@ -124,7 +125,7 @@ const drillLibrary: Record<SkillKey, Drill[]> = {
   offense: [
     {
       name: "Green-Light Attack",
-      purpose: "Attack only balls that can be contacted above net height.",
+      purpose: "Build a reliable starting point: attack balls above net height and stay patient on lower balls.",
       setup: "Both players begin at the kitchen. The feeder alternates neutral dinks and slightly elevated balls.",
       steps: [
         "Call “wait” for a neutral ball and continue dinking.",
@@ -135,6 +136,7 @@ const drillLibrary: Record<SkillKey, Drill[]> = {
       competitiveTarget: "Correctly identify 9 of 10 and place 7 attacks below shoulder height.",
       solo: "Use alternating low and higher self-feeds against a wall; attack only the higher rebound.",
       partner: "Feeder randomizes height without telling the hitter what is coming.",
+      advancedVariation: "After the standard drill is controlled, mix in occasional low feeds. Disguise a compact forehand or backhand flick from below net height, using topspin to lift the ball over the net and bring it down. Prioritize placement and recovery—not maximum speed.",
     },
     {
       name: "Finish to Space",
@@ -165,6 +167,7 @@ const drillLibrary: Record<SkillKey, Drill[]> = {
       competitiveTarget: "Land 7 of 10 resets in the kitchen from randomized feeds.",
       solo: "Against a wall, absorb ten firm rebounds so the next bounce lands close to you.",
       partner: "Feeder increases pace only after the defender completes three successful resets.",
+      advancedVariation: "Ask the feeder to include fast balls that arrive above net height. Instead of automatically counterattacking, relax the grip, absorb the pace and guide the paddle in a slow, controlled downward motion so the ball lands softly in the kitchen and returns the rally to dinking.",
     },
     {
       name: "Two-Step Recovery",
@@ -710,6 +713,7 @@ export default function Home() {
                             <div><dt>Set up</dt><dd>{drill.setup}</dd></div>
                             <div><dt>How to do it</dt><dd><ol>{drill.steps.map((step) => <li key={step}>{step}</li>)}</ol></dd></div>
                             <div className="target-box"><dt>Your target</dt><dd>{style === "social" ? drill.socialTarget : drill.competitiveTarget}</dd></div>
+                            {style === "competitive" && drill.advancedVariation && <div className="advanced-box"><dt>Advanced variation</dt><dd>{drill.advancedVariation}</dd></div>}
                             <div className="two-way"><span><dt>Solo</dt><dd>{drill.solo}</dd></span><span><dt>With a partner</dt><dd>{drill.partner}</dd></span></div>
                           </dl>
                         </article>

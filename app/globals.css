@@ -243,6 +243,9 @@ button:focus-visible, input:focus-visible {
 .drill-card ol { margin: 7px 0 0; padding-left: 21px; }
 .target-box { padding: 16px 18px; border-radius: 13px; background: #f3f9ed; border-left: 4px solid var(--green); }
 .target-box dt { color: #4e831b; }
+.advanced-box { padding: 17px 18px; border-radius: 13px; border: 2px solid #8fc5ed; background: linear-gradient(135deg, #eef7ff, #f6fbff); }
+.advanced-box dt { color: var(--blue-dark); }
+.advanced-box dd { font-weight: 560; }
 .two-way { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .two-way > span { padding: 14px; border-radius: 12px; background: #f4f8fc; }
 
