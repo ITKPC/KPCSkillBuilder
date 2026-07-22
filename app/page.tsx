@@ -14,7 +14,8 @@ const skills = [
 type SkillKey = (typeof skills)[number]["key"];
 type Scores = Record<SkillKey, number>;
 type PlayStyle = "social" | "competitive";
-type Screen = "home" | "pbvision" | "assessment" | "style" | "results";
+type Screen = "home" | "pbvision" | "assessment" | "choose" | "style" | "results";
+type Source = "PB Vision" | "self-assessment" | "chosen focus";
 
 const initialScores: Scores = {
   serve: 3,
@@ -245,14 +246,17 @@ export default function Home() {
   const [scores, setScores] = useState<Scores>(initialScores);
   const [assessment, setAssessment] = useState<Partial<Scores>>({});
   const [assessmentIndex, setAssessmentIndex] = useState(0);
-  const [source, setSource] = useState<"PB Vision" | "self-assessment">("self-assessment");
+  const [source, setSource] = useState<Source>("self-assessment");
+  const [chosenFocus, setChosenFocus] = useState<SkillKey[]>([]);
 
   const rankedSkills = useMemo(
     () => [...skills].sort((a, b) => scores[a.key] - scores[b.key]),
     [scores],
   );
 
-  const priorities = rankedSkills.slice(0, 2);
+  const priorities = source === "chosen focus"
+    ? chosenFocus.map((key) => skills.find((skill) => skill.key === key)!).filter(Boolean)
+    : rankedSkills.slice(0, 2);
 
   const startOver = () => {
     setScreen("home");
@@ -260,6 +264,21 @@ export default function Home() {
     setAssessment({});
     setAssessmentIndex(0);
     setStyle("social");
+    setChosenFocus([]);
+  };
+
+  const toggleFocus = (key: SkillKey) => {
+    setChosenFocus((current) => {
+      if (current.includes(key)) return current.filter((item) => item !== key);
+      if (current.length >= 2) return current;
+      return [...current, key];
+    });
+  };
+
+  const continueWithChosenFocus = () => {
+    if (!chosenFocus.length) return;
+    setSource("chosen focus");
+    setScreen("style");
   };
 
   const chooseAssessmentAnswer = (value: number) => {
@@ -282,11 +301,127 @@ export default function Home() {
 
   const showPlan = () => setScreen("results");
 
+  const savePlanImage = async () => {
+    const width = 1200;
+    const drillCount = priorities.length * 2;
+    const height = 690 + drillCount * 245;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+      const words = text.split(" ");
+      let line = "";
+      let currentY = y;
+      for (const word of words) {
+        const testLine = line ? `${line} ${word}` : word;
+        if (context.measureText(testLine).width > maxWidth && line) {
+          context.fillText(line, x, currentY);
+          line = word;
+          currentY += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) context.fillText(line, x, currentY);
+      return currentY + lineHeight;
+    };
+
+    context.fillStyle = "#f4f8fb";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#061747";
+    context.fillRect(0, 0, width, 330);
+    context.fillStyle = "#01aef0";
+    context.fillRect(0, 320, width, 10);
+
+    try {
+      const logo = new window.Image();
+      logo.src = "/kpc-logo.png";
+      await logo.decode();
+      context.save();
+      context.beginPath();
+      context.arc(104, 96, 66, 0, Math.PI * 2);
+      context.clip();
+      context.drawImage(logo, 38, 30, 132, 132);
+      context.restore();
+    } catch {
+      // The plan remains useful if the logo cannot be drawn.
+    }
+
+    context.fillStyle = "#e9df46";
+    context.font = "700 22px Arial";
+    context.fillText("KPC SKILL BUILDER", 205, 72);
+    context.fillStyle = "#ffffff";
+    context.font = "800 48px Arial";
+    const focusTitle = priorities.length === 1
+      ? `Focus on ${priorities[0].label}`
+      : `Focus on ${priorities[0].label}, then ${priorities[1].label}`;
+    wrapText(focusTitle, 205, 130, 900, 58);
+    context.fillStyle = "#dceefe";
+    context.font = "400 23px Arial";
+    context.fillText(`${style === "social" ? "Social" : "Competitive"} practice plan • ${source}`, 205, 260);
+
+    let y = 390;
+    context.fillStyle = "#061747";
+    context.font = "800 34px Arial";
+    context.fillText("Your practice plan", 58, y);
+    y += 48;
+
+    priorities.forEach((priority, priorityIndex) => {
+      drillLibrary[priority.key].forEach((drill, drillIndex) => {
+        context.fillStyle = "#ffffff";
+        context.strokeStyle = "#c8d9e8";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.roundRect(48, y, 1104, 215, 20);
+        context.fill();
+        context.stroke();
+        context.fillStyle = priorityIndex === 0 ? "#01aef0" : "#8ec753";
+        context.fillRect(48, y, 10, 215);
+        context.fillStyle = "#0877cf";
+        context.font = "800 18px Arial";
+        context.fillText(`PRIORITY ${priorityIndex + 1} • ${priority.label.toUpperCase()}`, 82, y + 38);
+        context.fillStyle = "#061747";
+        context.font = "800 29px Arial";
+        context.fillText(`${priorityIndex + 1}.${drillIndex + 1}  ${drill.name}`, 82, y + 78);
+        context.fillStyle = "#52617b";
+        context.font = "400 21px Arial";
+        wrapText(drill.purpose, 82, y + 112, 1010, 28);
+        context.fillStyle = "#4d851a";
+        context.font = "700 20px Arial";
+        wrapText(`Target: ${style === "social" ? drill.socialTarget : drill.competitiveTarget}`, 82, y + 170, 1010, 26);
+        y += 245;
+      });
+    });
+
+    context.fillStyle = "#061747";
+    context.font = "800 30px Arial";
+    context.fillText("Four-week rhythm", 58, y + 10);
+    context.fillStyle = "#52617b";
+    context.font = "400 21px Arial";
+    const weeks = [
+      "Week 1: Learn the Priority 1 drills.",
+      "Week 2: Repeat Priority 1 and meet the targets.",
+      priorities.length > 1 ? "Week 3: Add the Priority 2 drills." : "Week 3: Increase the challenge gradually.",
+      "Week 4: Mix the drills, then reassess.",
+    ];
+    weeks.forEach((week, index) => context.fillText(week, 58, y + 52 + index * 34));
+
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = "KPC-practice-plan.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   return (
     <main className="app-shell">
       <header className="site-header">
         <button className="brand" onClick={startOver} aria-label="KPC Skill Builder home">
-          <span className="brand-kpc">KPC</span>
+          <span className="brand-logo" role="img" aria-label="Kamloops Pickleball Club" />
           <span className="brand-divider" aria-hidden="true" />
           <span className="brand-name">KPC Skill Builder</span>
         </button>
@@ -324,6 +459,12 @@ export default function Home() {
                 <span className="start-number">02</span>
                 <span className="start-title">Help me assess my skills</span>
                 <span className="start-description">Answer six quick questions</span>
+                <span className="start-arrow" aria-hidden="true">→</span>
+              </button>
+              <button className="start-card start-card-tertiary" onClick={() => setScreen("choose")}>
+                <span className="start-number">03</span>
+                <span className="start-title">I know what I want to improve</span>
+                <span className="start-description">Choose one or two focus areas</span>
                 <span className="start-arrow" aria-hidden="true">→</span>
               </button>
             </div>
@@ -405,10 +546,42 @@ export default function Home() {
         </section>
       )}
 
+      {screen === "choose" && (
+        <section className="flow-screen">
+          <div className="flow-card choose-card">
+            <button className="back-button" onClick={() => setScreen("home")}>← Back</button>
+            <p className="eyebrow">Choose your focus</p>
+            <h1>What would you like to improve?</h1>
+            <p className="flow-intro">Choose one or two areas. No scores or assessment needed.</p>
+            <div className="focus-choice-grid">
+              {skills.map((skill) => {
+                const selected = chosenFocus.includes(skill.key);
+                return (
+                  <button
+                    key={skill.key}
+                    className={selected ? "focus-choice selected" : "focus-choice"}
+                    onClick={() => toggleFocus(skill.key)}
+                    aria-pressed={selected}
+                  >
+                    <span>{skill.symbol}</span>
+                    <b>{skill.label}</b>
+                    {selected && <em>Selected</em>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="focus-footer">
+              <p>{chosenFocus.length === 0 ? "Choose at least one area." : `${chosenFocus.length} of 2 selected`}</p>
+              <button className="primary-button" disabled={!chosenFocus.length} onClick={continueWithChosenFocus}>Continue</button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {screen === "style" && (
         <section className="flow-screen">
           <div className="flow-card style-card">
-            <button className="back-button" onClick={() => setScreen(source === "PB Vision" ? "pbvision" : "assessment")}>← Back</button>
+            <button className="back-button" onClick={() => setScreen(source === "PB Vision" ? "pbvision" : source === "chosen focus" ? "choose" : "assessment")}>← Back</button>
             <p className="eyebrow">Step 2 of 2</p>
             <h1>What kind of practice plan do you want today?</h1>
             <p className="flow-intro">This changes the feel of your drills—not your assessment.</p>
@@ -434,20 +607,20 @@ export default function Home() {
           <div className="results-hero court-bg">
             <div>
               <p className="eyebrow">Your KPC development profile</p>
-              <h1>Focus first on {priorities[0].label}, then {priorities[1].label}</h1>
+              <h1>{priorities.length === 1 ? `Focus on ${priorities[0].label}` : `Focus first on ${priorities[0].label}, then ${priorities[1].label}`}</h1>
               <p>
-                Based on your {source === "PB Vision" ? "entered PB Vision scores" : "six-question self-assessment"} and a {style} practice style.
+                Based on your {source === "PB Vision" ? "entered PB Vision scores" : source === "chosen focus" ? "chosen focus" : "six-question self-assessment"} and a {style} practice style.
                 This is a development guide—not an official club rating.
               </p>
             </div>
             <div className="results-actions no-print">
               <button className="secondary-button" onClick={startOver}>Start again</button>
-              <button className="primary-button" onClick={() => window.print()}>Print my plan</button>
+              <button className="primary-button" onClick={savePlanImage}>Save plan image</button>
             </div>
           </div>
 
           <div className="results-content">
-            <section className="profile-card" aria-labelledby="profile-heading">
+            {source !== "chosen focus" && <section className="profile-card" aria-labelledby="profile-heading">
               <div className="section-heading">
                 <div><p className="eyebrow">Your six areas</p><h2 id="profile-heading">Development profile</h2></div>
                 <span className="source-badge">{source}</span>
@@ -464,11 +637,11 @@ export default function Home() {
                   );
                 })}
               </div>
-            </section>
+            </section>}
 
             <section className="plan-section" aria-labelledby="plan-heading">
               <div className="section-heading">
-                <div><p className="eyebrow">Your practice plan</p><h2 id="plan-heading">Four drills for your two priorities</h2></div>
+                <div><p className="eyebrow">Your practice plan</p><h2 id="plan-heading">{priorities.length * 2} drills for your {priorities.length === 1 ? "focus area" : "two priorities"}</h2></div>
                 <span className="style-badge">{style === "social" ? "Social plan" : "Competitive plan"}</span>
               </div>
               <div className="priority-blocks">
@@ -506,8 +679,8 @@ export default function Home() {
               <ol>
                 <li><b>Week 1</b><span>Learn the two Priority 1 drills.</span></li>
                 <li><b>Week 2</b><span>Repeat Priority 1 and meet the targets.</span></li>
-                <li><b>Week 3</b><span>Add the two Priority 2 drills.</span></li>
-                <li><b>Week 4</b><span>Mix all four drills, then reassess.</span></li>
+                <li><b>Week 3</b><span>{priorities.length > 1 ? "Add the two Priority 2 drills." : "Increase the challenge gradually."}</span></li>
+                <li><b>Week 4</b><span>{priorities.length === 1 ? "Mix both drills, then reassess." : "Mix all four drills, then reassess."}</span></li>
               </ol>
             </section>
 
