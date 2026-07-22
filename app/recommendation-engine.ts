@@ -44,29 +44,27 @@ export function explainRecommendation(
   source: RecommendationSource,
   style: RecommendationStyle,
 ): string {
-  const intensity = style === "competitive"
-    ? "The drills add pressure, decision-making and advanced variations where appropriate."
-    : "The drills emphasize control, confidence and repeatable success.";
+  const emphasis = style === "competitive"
+    ? "They add pressure, decision-making and more advanced variations."
+    : "They build control, confidence and repeatable success.";
 
   if (source === "chosen focus") {
-    return `You selected ${skillLabel} as a focus area. ${intensity}`;
+    return `You chose ${skillLabel} as a focus area. The drills below work directly on that part of your game. ${emphasis}`;
   }
 
   if (source === "PB Vision") {
-    const challenge = score < 3
-      ? "foundation work before gradually increasing difficulty"
+    const reason = score < 3
+      ? "start with reliable technique and consistency before adding difficulty"
       : score <= 3.75
-        ? "developing drills while reinforcing the underlying fundamentals"
-        : "advanced drills that provide an appropriate challenge";
-    return `You entered a PB Vision ${skillLabel} score of ${score.toFixed(1)}. The app used that entered score to select ${challenge}. KPC Skill Builder does not change, verify or issue PB Vision ratings. ${intensity}`;
+        ? "strengthen consistency while introducing more demanding situations"
+        : "provide an advanced challenge without returning to introductory work";
+    return `Your entered PB Vision ${skillLabel} score was ${score.toFixed(1)}. We chose the drills below to ${reason}. ${emphasis}`;
   }
 
-  const profile = practiceProfileLabel(score);
-  const approach = score < 3
-    ? "The plan begins with control and foundation work before adding difficulty."
+  const reason = score < 3
+    ? "build dependable technique and confidence before increasing difficulty"
     : score <= 3.75
-      ? "The plan combines developing drills with reinforcement of the fundamentals."
-      : "The plan uses more challenging drills rather than repeating introductory work.";
-
-  return `Your answers suggest a ${profile.toLowerCase()} practice profile for ${skillLabel}. ${approach} This is a drill-selection guide, not a player rating or club placement decision. ${intensity}`;
+      ? "strengthen consistency while progressing the skill"
+      : "challenge the skill with more demanding practice";
+  return `Based on your answers, we chose the drills below to ${reason}. ${emphasis}`;
 }
