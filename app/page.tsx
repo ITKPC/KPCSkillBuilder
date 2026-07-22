@@ -14,8 +14,8 @@ const skills = [
 type SkillKey = (typeof skills)[number]["key"];
 type Scores = Record<SkillKey, number>;
 type PlayStyle = "social" | "competitive";
-type Screen = "home" | "pbvision" | "assessment" | "choose" | "style" | "session" | "results";
-type Source = "PB Vision" | "self-assessment" | "chosen focus";
+type Screen = "home" | "pbvision" | "assessment" | "choose" | "style" | "session" | "customstyle" | "customdrills" | "results";
+type Source = "PB Vision" | "self-assessment" | "chosen focus" | "custom plan";
 type DrillCount = 2 | 4 | 6;
 
 const sessionOptions: { name: string; drillCount: DrillCount; minutes: number }[] = [
@@ -246,6 +246,15 @@ const drillLibrary: Record<SkillKey, Drill[]> = {
   ],
 };
 
+const allDrillChoices = skills.flatMap((skill) =>
+  drillLibrary[skill.key].map((drill, drillIndex) => ({
+    id: `${skill.key}-${drillIndex}`,
+    skill,
+    drill,
+    drillIndex,
+  })),
+);
+
 function formatScore(value: number) {
   return value.toFixed(1);
 }
@@ -259,27 +268,47 @@ export default function Home() {
   const [source, setSource] = useState<Source>("self-assessment");
   const [chosenFocus, setChosenFocus] = useState<SkillKey[]>([]);
   const [drillCount, setDrillCount] = useState<DrillCount>(4);
+  const [customDrills, setCustomDrills] = useState<string[]>([]);
 
   const rankedSkills = useMemo(
     () => [...skills].sort((a, b) => scores[a.key] - scores[b.key]),
     [scores],
   );
 
-  const priorities = source === "chosen focus"
-    ? chosenFocus.slice(0, drillCount / 2).map((key) => skills.find((skill) => skill.key === key)!).filter(Boolean)
-    : rankedSkills.slice(0, drillCount / 2);
+  const customPlanDrills = allDrillChoices.filter((choice) => customDrills.includes(choice.id));
+  const priorities = source === "custom plan"
+    ? skills.filter((skill) => customPlanDrills.some((choice) => choice.skill.key === skill.key))
+    : source === "chosen focus"
+      ? chosenFocus.slice(0, drillCount / 2).map((key) => skills.find((skill) => skill.key === key)!).filter(Boolean)
+      : rankedSkills.slice(0, drillCount / 2);
 
   const session = sessionOptions.find((option) => option.drillCount === drillCount)!;
+  const planDrillCount = source === "custom plan" ? customPlanDrills.length : drillCount;
+  const planMinutes = source === "custom plan" ? customPlanDrills.length * 10 : session.minutes;
+  const sessionName = source === "custom plan" ? "Build Your Own" : session.name;
+  const planGroups = priorities.map((priority) => ({
+    priority,
+    drills: source === "custom plan"
+      ? customPlanDrills.filter((choice) => choice.skill.key === priority.key).map((choice) => choice.drill)
+      : drillLibrary[priority.key],
+  }));
   const focusLabels = priorities.map((priority) => priority.label);
   const focusTitle = focusLabels.length === 1
     ? `Focus on ${focusLabels[0]}`
     : `Focus on ${focusLabels.slice(0, -1).join(", ")}, then ${focusLabels.at(-1)}`;
-  const weeklyRhythm = [
-    "Learn the Priority 1 drills.",
-    priorities.length > 1 ? "Add the Priority 2 drills." : "Repeat Priority 1 and meet the targets.",
-    priorities.length > 2 ? "Add the Priority 3 drills." : "Increase the challenge gradually.",
-    `Mix all ${drillCount} drills, then reassess.`,
-  ];
+  const weeklyRhythm = source === "custom plan"
+    ? [
+        `Learn ${planDrillCount === 1 ? "your selected drill" : "the first half of your selected drills"}.`,
+        "Repeat them and work toward the targets.",
+        planDrillCount > 1 ? "Add the remaining drills." : "Increase the challenge gradually.",
+        `Put ${planDrillCount === 1 ? "the drill" : `all ${planDrillCount} drills`} together and adjust your plan.`,
+      ]
+    : [
+        "Learn the Priority 1 drills.",
+        priorities.length > 1 ? "Add the Priority 2 drills." : "Repeat Priority 1 and meet the targets.",
+        priorities.length > 2 ? "Add the Priority 3 drills." : "Increase the challenge gradually.",
+        `Mix all ${drillCount} drills, then reassess.`,
+      ];
 
   const startOver = () => {
     setScreen("home");
@@ -289,6 +318,7 @@ export default function Home() {
     setStyle("social");
     setChosenFocus([]);
     setDrillCount(4);
+    setCustomDrills([]);
   };
 
   const toggleFocus = (key: SkillKey) => {
@@ -328,9 +358,20 @@ export default function Home() {
     setScreen("results");
   };
 
+  const startCustomPlan = () => {
+    setSource("custom plan");
+    setStyle("social");
+    setCustomDrills([]);
+    setScreen("customstyle");
+  };
+
+  const toggleCustomDrill = (id: string) => {
+    setCustomDrills((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
+
   const savePlanImage = async () => {
     const width = 1200;
-    const height = 690 + drillCount * 245;
+    const height = 690 + planDrillCount * 245;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -392,8 +433,8 @@ export default function Home() {
     context.fillText("Your practice plan", 58, y);
     y += 48;
 
-    priorities.forEach((priority, priorityIndex) => {
-      drillLibrary[priority.key].forEach((drill, drillIndex) => {
+    planGroups.forEach(({ priority, drills }, priorityIndex) => {
+      drills.forEach((drill, drillIndex) => {
         context.fillStyle = "#ffffff";
         context.strokeStyle = "#c8d9e8";
         context.lineWidth = 2;
@@ -501,7 +542,13 @@ export default function Home() {
               <button className="start-card start-card-tertiary" onClick={() => setScreen("choose")}>
                 <span className="start-number">03</span>
                 <span className="start-title">I know what I want to improve</span>
-                <span className="start-description">Choose one or two focus areas</span>
+                <span className="start-description">Choose up to three focus areas</span>
+                <span className="start-arrow" aria-hidden="true">→</span>
+              </button>
+              <button className="start-card start-card-quaternary" onClick={startCustomPlan}>
+                <span className="start-number">04</span>
+                <span className="start-title">Build my own plan</span>
+                <span className="start-description">Choose the exact drills you want</span>
                 <span className="start-arrow" aria-hidden="true">→</span>
               </button>
             </div>
@@ -654,6 +701,71 @@ export default function Home() {
         </section>
       )}
 
+      {screen === "customstyle" && (
+        <section className="flow-screen">
+          <div className="flow-card style-card">
+            <button className="back-button" onClick={() => setScreen("home")}>← Back</button>
+            <p className="eyebrow">Build your own plan</p>
+            <h1>How do you want to practise?</h1>
+            <p className="flow-intro">Your choice changes the targets and adds advanced variations where they fit.</p>
+            <div className="style-choice-grid">
+              <button className={style === "social" ? "style-choice selected" : "style-choice"} onClick={() => setStyle("social")}>
+                <span className="style-choice-icon" aria-hidden="true">● ●</span>
+                <b>Social</b>
+                <span>Comfortable improvement, confidence, consistency and longer rallies.</span>
+              </button>
+              <button className={style === "competitive" ? "style-choice selected" : "style-choice"} onClick={() => setStyle("competitive")}>
+                <span className="style-choice-icon" aria-hidden="true">◆</span>
+                <b>Competitive / Advanced</b>
+                <span>Stronger targets, pressure practice and advanced variations where appropriate.</span>
+              </button>
+            </div>
+            <button className="primary-button" onClick={() => setScreen("customdrills")}>Choose my drills</button>
+          </div>
+        </section>
+      )}
+
+      {screen === "customdrills" && (
+        <section className="flow-screen custom-drills-screen">
+          <div className="flow-card custom-drills-card">
+            <button className="back-button" onClick={() => setScreen("customstyle")}>← Back</button>
+            <p className="eyebrow">Build your own plan · {style === "social" ? "Social" : "Competitive / Advanced"}</p>
+            <h1>Pick the drills you want</h1>
+            <p className="flow-intro">Choose as many as you like. Each drill takes about 10 minutes, and its development area is shown below.</p>
+            <div className="custom-drill-groups">
+              {skills.map((skill) => (
+                <section className="custom-drill-group" key={skill.key} aria-labelledby={`custom-${skill.key}`}>
+                  <div className="custom-group-heading"><span>{skill.symbol}</span><h2 id={`custom-${skill.key}`}>{skill.label}</h2></div>
+                  <div className="custom-drill-grid">
+                    {allDrillChoices.filter((choice) => choice.skill.key === skill.key).map((choice) => {
+                      const selected = customDrills.includes(choice.id);
+                      return (
+                        <button
+                          className={selected ? "custom-drill-choice selected" : "custom-drill-choice"}
+                          key={choice.id}
+                          onClick={() => toggleCustomDrill(choice.id)}
+                          aria-pressed={selected}
+                        >
+                          <span className="custom-check" aria-hidden="true">{selected ? "✓" : "+"}</span>
+                          <span className="custom-drill-area">Works on {skill.label}</span>
+                          <b>{choice.drill.name}</b>
+                          <span>{choice.drill.purpose}</span>
+                          {style === "competitive" && choice.drill.advancedVariation && <em>Includes an advanced variation</em>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+            <div className="custom-plan-footer">
+              <div><b>{customDrills.length} {customDrills.length === 1 ? "drill" : "drills"} selected</b><span>{customDrills.length ? `About ${customDrills.length * 10} minutes` : "Choose at least one drill"}</span></div>
+              <button className="primary-button" disabled={!customDrills.length} onClick={() => setScreen("results")}>Build my plan</button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {screen === "results" && (
         <section className="results-screen">
           <div className="results-hero court-bg">
@@ -661,8 +773,8 @@ export default function Home() {
               <p className="eyebrow">Your KPC development profile</p>
               <h1>{focusTitle}</h1>
               <p>
-                Based on your {source === "PB Vision" ? "entered PB Vision scores" : source === "chosen focus" ? "chosen focus" : "six-question self-assessment"} and a {style} practice style.
-                Your {session.name} session includes {drillCount} drills and takes about {session.minutes} minutes. This is a development guide—not an official club rating.
+                Based on {source === "PB Vision" ? "your entered PB Vision scores" : source === "chosen focus" ? "your chosen focus" : source === "custom plan" ? "the drills you selected" : "your six-question self-assessment"} and a {style} practice style.
+                Your {sessionName} session includes {planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} and takes about {planMinutes} minutes. This is a development guide—not an official club rating.
               </p>
             </div>
             <div className="results-actions no-print">
@@ -672,7 +784,7 @@ export default function Home() {
           </div>
 
           <div className="results-content">
-            {source !== "chosen focus" && <section className="profile-card" aria-labelledby="profile-heading">
+            {(source === "PB Vision" || source === "self-assessment") && <section className="profile-card" aria-labelledby="profile-heading">
               <div className="section-heading">
                 <div><p className="eyebrow">Your six areas</p><h2 id="profile-heading">Development profile</h2></div>
                 <span className="source-badge">{source}</span>
@@ -693,18 +805,18 @@ export default function Home() {
 
             <section className="plan-section" aria-labelledby="plan-heading">
               <div className="section-heading">
-                <div><p className="eyebrow">{session.name} · about {session.minutes} minutes</p><h2 id="plan-heading">{drillCount} drills across {priorities.length} focus {priorities.length === 1 ? "area" : "areas"}</h2></div>
+                <div><p className="eyebrow">{sessionName} · about {planMinutes} minutes</p><h2 id="plan-heading">{planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} across {priorities.length} focus {priorities.length === 1 ? "area" : "areas"}</h2></div>
                 <span className="style-badge">{style === "social" ? "Social plan" : "Competitive plan"}</span>
               </div>
               <div className="priority-blocks">
-                {priorities.map((priority, priorityIndex) => (
+                {planGroups.map(({ priority, drills }, priorityIndex) => (
                   <div className="priority-block" key={priority.key}>
                     <div className="priority-header">
                       <span>Priority {priorityIndex + 1}</span>
                       <h3>{priority.label}</h3>
                     </div>
                     <div className="drill-grid">
-                      {drillLibrary[priority.key].map((drill, drillIndex) => (
+                      {drills.map((drill, drillIndex) => (
                         <article className="drill-card" key={drill.name}>
                           <div className="drill-number">{priorityIndex + 1}.{drillIndex + 1}</div>
                           <h4>{drill.name}</h4>
