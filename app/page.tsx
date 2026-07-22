@@ -26,6 +26,7 @@ type Source = "PB Vision" | "self-assessment" | "chosen focus" | "custom plan";
 type DrillCount = 2 | 4 | 6;
 type LevelFilter = "all" | Drill["level"];
 type PracticeFilter = "either" | "solo" | "partner";
+type ImageLine = { text: string; size: number; weight: number; gap: number; color?: string };
 
 const sessionOptions: { name: string; drillCount: DrillCount; minutes: number }[] = [
   { name: "Quick Rally", drillCount: 2, minutes: 20 },
@@ -66,6 +67,19 @@ const allDrillChoices = skills.flatMap((skill) =>
 
 const levelLabel = { foundation: "Foundation", developing: "Developing", advanced: "Advanced" } as const;
 
+function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  words.forEach((word) => {
+    const test = current ? `${current} ${word}` : word;
+    if (context.measureText(test).width <= maxWidth || !current) current = test;
+    else { lines.push(current); current = word; }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
   const [style, setStyle] = useState<PlayStyle>("social");
@@ -80,6 +94,7 @@ export default function Home() {
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [practiceFilter, setPracticeFilter] = useState<PracticeFilter>("either");
   const [searchText, setSearchText] = useState("");
+  const [sharingPlan, setSharingPlan] = useState(false);
 
   const rankedSkills = useMemo(() => [...skills].sort((a, b) => scores[a.key] - scores[b.key]), [scores]);
   const customPlanDrills = allDrillChoices.filter((choice) => customDrills.includes(choice.id));
@@ -136,6 +151,77 @@ export default function Home() {
     else { setScores(next as Scores); setSource("self-assessment"); setScreen("style"); }
   };
 
+  const shareFullPlan = async () => {
+    setSharingPlan(true);
+    try {
+      const width = 1400;
+      const margin = 80;
+      const maxWidth = width - margin * 2;
+      const measureCanvas = document.createElement("canvas");
+      const measure = measureCanvas.getContext("2d");
+      if (!measure) return;
+      const lines: ImageLine[] = [];
+      const add = (text: string, size = 30, weight = 400, gap = 12, color = "#061747") => {
+        measure.font = `${weight} ${size}px Arial`;
+        wrapText(measure, text, maxWidth).forEach((part, index, wrapped) => lines.push({ text: part, size, weight, gap: index === wrapped.length - 1 ? gap : 2, color }));
+      };
+      add("KPC SKILL BUILDER", 24, 800, 18, "#0877cf");
+      add(focusTitle, 54, 800, 18);
+      add(`${sessionName} · ${planDrillCount} ${planDrillCount === 1 ? "drill" : "drills"} · about ${planMinutes} minutes · ${style === "social" ? "Social" : "Competitive / Advanced"}`, 28, 700, 34, "#52617b");
+      planGroups.forEach(({ priority, explanation, drills }, priorityIndex) => {
+        add(`PRIORITY ${priorityIndex + 1}: ${priority.label}`, 34, 800, 14, "#5d9c22");
+        if (explanation) { add("Why these drills", 25, 800, 5); add(explanation, 27, 400, 22, "#23375e"); }
+        drills.forEach((drill, drillIndex) => {
+          add(`${priorityIndex + 1}.${drillIndex + 1}  ${drill.name}`, 36, 800, 5);
+          add(`${levelLabel[drill.level]} · ${drill.purpose}`, 25, 700, 16, "#0877cf");
+          add("SET UP", 22, 800, 4, "#5d9c22"); add(drill.setup, 27, 400, 12);
+          add("HOW TO DO IT", 22, 800, 4, "#5d9c22");
+          drill.steps.forEach((step, index) => add(`${index + 1}. ${step}`, 27, 400, 7));
+          add("YOUR TARGET", 22, 800, 4, "#5d9c22"); add(style === "social" ? drill.socialTarget : drill.competitiveTarget, 27, 400, 12);
+          if (style === "competitive" && drill.advancedVariation) { add("ADVANCED VARIATION", 22, 800, 4, "#5d9c22"); add(drill.advancedVariation, 27, 400, 12); }
+          add("SOLO", 22, 800, 4, "#5d9c22"); add(drill.solo, 27, 400, 10);
+          add("WITH A PARTNER", 22, 800, 4, "#5d9c22"); add(drill.partner, 27, 400, 28);
+        });
+      });
+      add("Created with KPC Skill Builder · Kamloops Pickleball Club", 23, 700, 0, "#52617b");
+      const height = Math.max(900, margin * 2 + lines.reduce((total, line) => total + Math.ceil(line.size * 1.35) + line.gap, 0));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = "#01aef0";
+      context.fillRect(0, 0, 24, height);
+      let y = margin;
+      lines.forEach((line) => {
+        context.font = `${line.weight} ${line.size}px Arial`;
+        context.fillStyle = line.color ?? "#061747";
+        context.textBaseline = "top";
+        context.fillText(line.text, margin, y);
+        y += Math.ceil(line.size * 1.35) + line.gap;
+      });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.96));
+      if (!blob) return;
+      const file = new File([blob], "kpc-full-practice-plan.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: "My KPC Practice Plan", text: "My complete KPC Skill Builder practice plan.", files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) console.error("Unable to share plan", error);
+    } finally {
+      setSharingPlan(false);
+    }
+  };
+
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -150,7 +236,7 @@ export default function Home() {
         <button className="start-card start-card-quaternary" onClick={() => { setSource("custom plan"); setCustomDrills([]); clearFilters(); setScreen("customstyle"); }}><span className="start-number">04</span><span className="start-title">Build my own plan</span><span className="start-description">Choose from all available drills</span></button>
       </div></div></section>}
 
-      {screen === "pbvision" && <section className="flow-screen"><div className="flow-card score-entry-card"><button className="back-button" onClick={() => setScreen("home")}>← Back</button><h1>Enter your PB Vision scores</h1><p className="flow-intro">Drag each slider or type the exact score. Scores must be between 2.0 and 5.5.</p><div className="score-grid">{skills.map((skill) => <label className="score-field" key={skill.key}><span className="score-label"><b>{skill.label}</b><input type="number" min="2" max="5.5" step="0.1" inputMode="decimal" aria-label={`${skill.label} PB Vision score`} value={scores[skill.key].toFixed(1)} onChange={(event) => { const value = Number(event.target.value); if (Number.isFinite(value)) updateScore(skill.key, value); }} /></span><input type="range" min="2" max="5.5" step="0.1" value={scores[skill.key]} onChange={(event) => updateScore(skill.key, Number(event.target.value))} /></label>)}</div><button className="primary-button" onClick={() => { setSource("PB Vision"); setScreen("style"); }}>Continue</button></div></section>}
+      {screen === "pbvision" && <section className="flow-screen"><div className="flow-card score-entry-card"><button className="back-button" onClick={() => setScreen("home")}>← Back</button><h1>Enter your PB Vision scores</h1><p className="flow-intro">Select or adjust each PB Vision score. Scores must be between 2.0 and 5.5.</p><div className="score-grid">{skills.map((skill) => <label className="score-field" key={skill.key}><span className="score-label"><b>{skill.label}</b><input type="number" min="2" max="5.5" step="0.1" inputMode="decimal" aria-label={`${skill.label} PB Vision score`} value={scores[skill.key].toFixed(1)} onChange={(event) => { const value = Number(event.target.value); if (Number.isFinite(value)) updateScore(skill.key, value); }} /></span><input type="range" min="2" max="5.5" step="0.1" value={scores[skill.key]} onChange={(event) => updateScore(skill.key, Number(event.target.value))} /></label>)}</div><button className="primary-button" onClick={() => { setSource("PB Vision"); setScreen("style"); }}>Continue</button></div></section>}
 
       {screen === "assessment" && <section className="flow-screen"><div className="flow-card assessment-card"><button className="back-button" onClick={() => assessmentIndex === 0 ? setScreen("home") : setAssessmentIndex(assessmentIndex - 1)}>← Back</button><p className="eyebrow">Question {assessmentIndex + 1} of 6</p><h1>{assessmentStatements[skills[assessmentIndex].key]}</h1><div className="answer-grid">{answerChoices.map((answer) => <button key={answer.label} className="answer-button" onClick={() => chooseAssessmentAnswer(answer.value)}>{answer.label}</button>)}</div></div></section>}
 
@@ -178,7 +264,7 @@ export default function Home() {
         <div className="custom-plan-footer"><div><b>{customDrills.length} {customDrills.length === 1 ? "drill" : "drills"} selected</b><span>{customDrills.length ? `About ${selectedMinutes} minutes` : "Choose at least one drill"}</span></div><button className="primary-button" disabled={!customDrills.length} onClick={() => setScreen("results")}>{customDrills.length ? `Build ${selectedMinutes}-Minute Practice` : "Build my practice"}</button></div>
       </div></section>}
 
-      {screen === "results" && <section className="results-screen"><div className="results-hero court-bg"><div><p className="eyebrow">Your KPC development profile</p><h1>{focusTitle}</h1><p>Your {sessionName} session includes {planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} and takes about {planMinutes} minutes.</p></div><div className="results-actions"><button className="secondary-button" onClick={startOver}>Start again</button></div></div><div className="results-content"><section className="plan-section"><div className="priority-blocks">{planGroups.map(({ priority, explanation, drills }, priorityIndex) => <div className="priority-block" key={priority.key}><div className="priority-header"><span>Priority {priorityIndex + 1}</span><h3>{priority.label}</h3></div>{explanation && <div className="target-box"><dt>Why these drills?</dt><dd>{explanation}</dd></div>}<div className="drill-grid">{drills.map((drill, drillIndex) => <article className="drill-card" key={`${priority.key}-${drill.name}`}><div className="drill-number">{priorityIndex + 1}.{drillIndex + 1}</div><p className="eyebrow">{levelLabel[drill.level]}</p><h4>{drill.name}</h4><p className="drill-purpose">{drill.purpose}</p><dl><div><dt>Set up</dt><dd>{drill.setup}</dd></div><div><dt>How to do it</dt><dd><ol>{drill.steps.map((step) => <li key={step}>{step}</li>)}</ol></dd></div><div className="target-box"><dt>Your target</dt><dd>{style === "social" ? drill.socialTarget : drill.competitiveTarget}</dd></div>{style === "competitive" && drill.advancedVariation && <div className="advanced-box"><dt>Advanced variation</dt><dd>{drill.advancedVariation}</dd></div>}<div className="two-way"><span><dt>Solo</dt><dd>{drill.solo}</dd></span><span><dt>With a partner</dt><dd>{drill.partner}</dd></span></div></dl></article>)}</div></div>)}</div></section></div></section>}
+      {screen === "results" && <section className="results-screen"><div className="results-hero court-bg"><div><p className="eyebrow">Your KPC development profile</p><h1>{focusTitle}</h1><p>Your {sessionName} session includes {planDrillCount} {planDrillCount === 1 ? "drill" : "drills"} and takes about {planMinutes} minutes.</p></div><div className="results-actions"><button className="primary-button" onClick={shareFullPlan} disabled={sharingPlan}>{sharingPlan ? "Preparing full plan…" : "Share full plan"}</button><button className="secondary-button" onClick={startOver}>Start again</button></div></div><div className="results-content"><section className="plan-section"><div className="priority-blocks">{planGroups.map(({ priority, explanation, drills }, priorityIndex) => <div className="priority-block" key={priority.key}><div className="priority-header"><span>Priority {priorityIndex + 1}</span><h3>{priority.label}</h3></div>{explanation && <div className="target-box"><dt>Why these drills?</dt><dd>{explanation}</dd></div>}<div className="drill-grid">{drills.map((drill, drillIndex) => <article className="drill-card" key={`${priority.key}-${drill.name}`}><div className="drill-number">{priorityIndex + 1}.{drillIndex + 1}</div><p className="eyebrow">{levelLabel[drill.level]}</p><h4>{drill.name}</h4><p className="drill-purpose">{drill.purpose}</p><dl><div><dt>Set up</dt><dd>{drill.setup}</dd></div><div><dt>How to do it</dt><dd><ol>{drill.steps.map((step) => <li key={step}>{step}</li>)}</ol></dd></div><div className="target-box"><dt>Your target</dt><dd>{style === "social" ? drill.socialTarget : drill.competitiveTarget}</dd></div>{style === "competitive" && drill.advancedVariation && <div className="advanced-box"><dt>Advanced variation</dt><dd>{drill.advancedVariation}</dd></div>}<div className="two-way"><span><dt>Solo</dt><dd>{drill.solo}</dd></span><span><dt>With a partner</dt><dd>{drill.partner}</dd></span></div></dl></article>)}</div></div>)}</div></section></div></section>}
     </main>
   );
 }
